@@ -1,0 +1,5 @@
+dependencies {
+    compile project(':micrometer-core')
+
+    testCompile project(':micrometer-test')
+}

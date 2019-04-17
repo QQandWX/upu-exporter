@@ -1,0 +1,6 @@
+dependencies {
+    compile project(':micrometer-core')
+    compile 'io.prometheus:simpleclient_common:latest.release'
+
+    testCompile project(':micrometer-test')
+}

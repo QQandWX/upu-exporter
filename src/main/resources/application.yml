@@ -1,0 +1,47 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: 'prometheus'
+      server:
+        auto-time-requests: true
+  endpoint:
+    health:
+      show-details: always
+
+info:
+  app:
+    name: upu_exporter
+    description: upu_exporter
+    version: 2.0.3.RELEASE
+    encoding: UTF-8
+    java:
+      version: 1.8
+
+spring:
+  security:
+    user:
+      name: actuator
+      password: actuator
+      roles: ACTUATOR_ADMIN
+
+      
+#zookeeper.server
+zookeeper: 
+  enabled: true
+  server: 10.222.2.190:2181,10.222.2.190:3181,10.222.2.190:4181
+  namespace: demo
+  digest: rt:rt                     #zkCli.sh acl 命令 addauth digest mpush
+  sessionTimeoutMs: 6000            #会话超时时间，单位为毫秒，默认60000ms,连接断开后，其它客户端还能请到临时节点的时间
+  connectionTimeoutMs: 6000         #连接创建超时时间，单位为毫秒
+  maxRetries: 3                     #最大重试次数
+  baseSleepTimeMs: 1000             #初始sleep时间 ,毫秒
+  listenerPath: /upu                #监控此路径下节点的变化
+  
+Scheduled:
+  metrices_interval: 0/3 * * * * ?  #监控数据更新间隔
+  
+
+
+
+  

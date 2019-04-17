@@ -1,0 +1,115 @@
+plugins {
+    id "net.ltgt.apt" version "0.10" // for dagger injection testing
+    id 'idea'
+    id 'com.github.johnrengelman.shadow' version '4.0.3'
+}
+
+apply plugin: 'nebula.optional-base'
+
+dependencies {
+    compile 'org.pcollections:pcollections:latest.release'
+
+    // JSR-305 only used for non-required meta-annotations
+    compile "com.google.code.findbugs:jsr305:latest.release", optional
+
+    compile 'org.hdrhistogram:HdrHistogram:latest.release'
+    compile('org.latencyutils:LatencyUtils:latest.release') {
+        exclude group: 'org.hdrhistogram', module: 'HdrHistogram'
+    }
+
+    // instrumentation options
+    compile 'io.dropwizard.metrics:metrics-core:4.0.+', optional
+
+    // cache monitoring
+    compile 'com.google.guava:guava:latest.release', optional
+    compile 'com.github.ben-manes.caffeine:caffeine:latest.release', optional
+    compile 'net.sf.ehcache:ehcache:latest.release', optional
+    compile 'javax.cache:cache-api:latest.release', optional
+    compile 'com.hazelcast:hazelcast:latest.release', optional
+    compile 'org.hibernate:hibernate-entitymanager:latest.release', optional
+
+    // server runtime monitoring
+    // 9.4+ are incompatible with the latest version of wiremock as of 1/4/2019
+    compile 'org.eclipse.jetty:jetty-server:9.2.+', optional
+    compile 'org.apache.tomcat.embed:tomcat-embed-core:8.+', optional
+
+    // hystrix monitoring
+    // metrics are better with https://github.com/Netflix/Hystrix/pull/1568 introduced
+    // in hystrix 1.5.12, but Netflix re-released 1.5.11 as 1.5.18 late in 2018.
+    // <=1.5.11 or 1.5.18 doesn't break with Micrometer, but open metrics won't be correct necessarily.
+    compile 'com.netflix.hystrix:hystrix-core:1.5.12', optional
+
+    // log monitoring
+    compile 'ch.qos.logback:logback-classic:1.2.+', optional
+    compile 'org.apache.logging.log4j:log4j-core:2.+', optional
+
+    // reactor
+    compile 'io.projectreactor:reactor-core:latest.release', optional
+    compile 'io.projectreactor.netty:reactor-netty:latest.release', optional
+
+    // @Timed AOP
+    compile 'org.aspectj:aspectjweaver:1.8.+', optional
+
+    compile 'com.squareup.okhttp3:okhttp:latest.release', optional
+
+    testCompile 'io.projectreactor:reactor-test:latest.release'
+
+    // JUnit 5
+    testCompile 'org.junit.jupiter:junit-jupiter-api:latest.release'
+    testCompile 'org.junit.jupiter:junit-jupiter-params:latest.release'
+    testRuntime 'org.junit.jupiter:junit-jupiter-engine:latest.release'
+
+    // Eclipse still needs this (as of 4.7.1a)
+    testRuntime 'org.junit.platform:junit-platform-launcher:latest.release'
+
+    testCompile 'org.mockito:mockito-core:latest.release'
+
+    testCompile 'org.hsqldb:hsqldb:latest.release'
+
+    // dependency injection tests
+    testCompile 'javax.inject:javax.inject:1'
+    testCompile 'org.springframework:spring-context:4.+'
+    testCompile 'org.springframework:spring-test:4.+'
+    testCompile 'com.google.inject:guice:4.1.0'
+
+    // Uncomment these if you are interested in testing injection with dagger in MeterRegistryInjectionTest
+//    testCompile 'com.google.dagger:dagger:2.11'
+//    testCompile 'com.google.dagger:dagger-compiler:2.11'
+
+    testCompile 'org.assertj:assertj-core:latest.release'
+
+    testCompile 'org.ehcache:ehcache:latest.release'
+
+    testCompile 'org.apache.kafka:kafka-clients:latest.release'
+
+    testCompile 'ru.lanwen.wiremock:wiremock-junit5:1.2.0'
+    testCompile 'com.github.tomakehurst:wiremock:latest.release'
+}
+
+shadowJar {
+    configurations = [project.configurations.compile]
+    classifier = null
+    dependencies {
+        include(dependency('org.pcollections:'))
+    }
+    relocate 'org.pcollections', 'io.micrometer.shaded.org.pcollections'
+}
+
+jar.enabled = false
+jar.dependsOn shadowJar
+
+publishing {
+    publications {
+        withType(MavenPublication) {
+            pom.withXml {
+                asNode()
+                        .dependencies
+                        .dependency
+                        .findAll {
+                    ['pcollections'].contains(it.artifactId.text())
+                }
+                .each { it.parent().remove(it) }
+            }
+        }
+    }
+}

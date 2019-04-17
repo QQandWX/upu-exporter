@@ -1,0 +1,6 @@
+dependencies {
+    compile project(':micrometer-core')
+    compile 'io.dropwizard.metrics:metrics-jmx:4.0.+'
+
+    testCompile project(':micrometer-test')
+}

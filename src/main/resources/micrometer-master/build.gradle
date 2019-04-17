@@ -1,0 +1,115 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven { url 'https://plugins.gradle.org/m2/' }
+        mavenLocal()
+    }
+    dependencies {
+        classpath 'org.ow2.asm:asm:5.0.3'
+        classpath 'io.spring.gradle:spring-release-plugin:0.20.1'
+        classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.2.0'
+        classpath 'me.champeau.gradle:jmh-gradle-plugin:0.4.8'
+        classpath 'com.netflix.nebula:nebula-project-plugin:3.4.0'
+    }
+
+    configurations.classpath.resolutionStrategy.cacheDynamicVersionsFor 0, 'minutes'
+}
+
+apply plugin: 'io.spring.release'
+
+allprojects {
+    apply plugin: 'io.spring.license'
+
+    afterEvaluate { project ->
+        println "I'm building $project.name with version $project.version"
+    }
+    group = 'io.micrometer'
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'checkstyle'
+
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+
+    task resolveAndLockAll {
+        doFirst {
+            assert gradle.startParameter.writeDependencyLocks
+        }
+        doLast {
+            def skip = ['annotationProcessor', 'apt', 'testAnnotationProcessor', 'checkstyle',
+                'shadow', 'testApt', 'archives', 'junitPlatform']
+            configurations.each {
+                if (it.canBeResolved && !skip.contains(it.name)) {
+                    it.resolve()
+                }
+            }
+        }
+    }
+
+    tasks {
+        compileJava {
+            options.encoding = 'UTF-8'
+            // ensure Java 8 baseline is enforced for main source
+            if (JavaVersion.current().isJava9Compatible()) {
+                options.compilerArgs.addAll(['--release', '8'])
+            }
+        }
+        compileTestJava {
+            options.encoding = 'UTF-8'
+            sourceCompatibility = JavaVersion.current()
+            targetCompatibility = JavaVersion.current()
+        }
+    }
+
+    if(!project.name.contains('samples') && !project.name.contains('benchmarks')) {
+        apply plugin: 'io.spring.publishing'
+
+        contacts {
+            'jschneider@pivotal.io' {
+                moniker 'Jon Schneider'
+                github 'jkschneider'
+            }
+        }
+
+        if (project.extensions.findByName('bintray')) {
+            bintray.labels = ['micrometer', 'atlas', 'metrics', 'prometheus', 'spectator', 'influx', 'new-relic', 'signalfx', 'wavefront', 'elastic', 'dynatrace', 'azure-monitor', 'appoptics', 'kairos', 'stackdriver']
+        }
+    }
+
+    description = 'Application monitoring instrumentation facade'
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+
+    checkstyle {
+        toolVersion = '8.18'
+        configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+    }
+
+    def check = tasks.findByName('check')
+    if (check) project.rootProject.tasks.releaseCheck.dependsOn check
+
+    //noinspection GroovyAssignabilityCheck
+    test {
+        // set heap size for the test JVM(s)
+        maxHeapSize = "1500m"
+
+        useJUnitPlatform()
+    }
+
+    license {
+        ext.year = Calendar.getInstance().get(Calendar.YEAR)
+        skipExistingHeaders = true
+    }
+}
+
+wrapper {
+    gradleVersion = '5.3'
+}
+
+defaultTasks 'build'
